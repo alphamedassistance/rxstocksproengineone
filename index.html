@@ -758,7 +758,7 @@
             // --- LOGIN ---
             document.getElementById('loginForm').addEventListener('submit', async (e) => {
                 e.preventDefault(); const u = document.getElementById('username').value.trim(); const p = document.getElementById('password').value;
-                if (u === 'account1' && p === 'store2025') { sessionStorage.setItem('loggedIn', 'true'); showInventoryPage(); await refreshAndRenderTable(); checkExpirationOnLoad(); } 
+                if (u === 'freeaccount' && p === 'store2025') { sessionStorage.setItem('loggedIn', 'true'); showInventoryPage(); await refreshAndRenderTable(); checkExpirationOnLoad(); } 
                 else { document.getElementById('login-error').textContent = 'Invalid credentials'; }
             });
 
@@ -1327,4 +1327,5 @@
         });
     </script>
 </body>
+
 </html>
