@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>RxStocks Pro ver. 1.0</title>
     
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#007bff">
-    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -256,7 +256,7 @@
         
         /* PWA Install Button */
         .install-btn-container { margin-top: 15px; text-align: center; display: none; width: 100%; }
-        .btn-install { background-color: #28a745; color: white; width: 100%; padding: 12px; margin-top: 10px; }
+        .btn-install { background-color: #28a745; color: white; width: 100%; padding: 12px; margin-top: 10px; font-weight: bold; border-radius: 6px; border:none; cursor: pointer; }
         
         /* Mobile Specific Tweaks */
         @media (max-width: 768px) {
@@ -636,12 +636,18 @@
     </div>
 
     <script>
-        // --- SUPABASE CONFIGURATION ---
+        // --- SUPABASE CONFIGURATION (FIXED) ---
         const SUPABASE_URL = "https://wmciiqeywkluzkslzsrq.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtY2lpcWV5d2tsdXprc2x6c3JxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDk0MjksImV4cCI6MjA3OTgyNTQyOX0.qVXO8GcXW8AsjWT4N-zkfW5B0g5qijoPX2mOZc4btVQ";
         
-        let supabase = null;
-        try { supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); console.log("Supabase initialized."); } catch (err) { console.error("Supabase Init Error", err); }
+        // RENAMED variable to supabaseClient to avoid conflict
+        let supabaseClient = null;
+        try { 
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); 
+            console.log("Supabase initialized."); 
+        } catch (err) { 
+            console.error("Supabase Init Error", err); 
+        }
 
         // --- PWA LOGIC ---
         let deferredPrompt;
@@ -740,10 +746,11 @@
                 if (!userCode) { errorEl.textContent = 'Enter code.'; return; }
                 btn.textContent = 'Verifying...'; btn.disabled = true; errorEl.textContent = '';
                 try {
-                    const { data, error } = await supabase.from('access_codes').select('*').eq('code', userCode).single();
+                    // UPDATED TO USE supabaseClient
+                    const { data, error } = await supabaseClient.from('access_codes').select('*').eq('code', userCode).single();
                     if (error || !data) throw new Error("Invalid Code");
                     if (data.status !== 'available') throw new Error("Code used.");
-                    const { error: updateError } = await supabase.from('access_codes').update({ status: 'used' }).eq('id', data.id);
+                    const { error: updateError } = await supabaseClient.from('access_codes').update({ status: 'used' }).eq('id', data.id);
                     if (updateError) throw updateError;
                     
                     const newExp = new Date(); newExp.setDate(newExp.getDate() + 30);
@@ -1029,7 +1036,7 @@
                 const pageItems = list.slice(start, start + replacementPerPage);
 
                 if(pageItems.length === 0) {
-                     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No items need replacement.</td></tr>';
+                      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No items need replacement.</td></tr>';
                 }
 
                 pageItems.forEach(i => {
@@ -1195,7 +1202,7 @@
 
                 const tbody = document.getElementById('expirationListBody');
                 if (expItems.length === 0) {
-                     tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">No items expiring within 10 days.</td></tr>';
+                      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">No items expiring within 10 days.</td></tr>';
                 } else {
                     tbody.innerHTML = expItems.map(i => {
                         return `<tr><td>${i.name}</td><td>${i.expirationDate}</td><td><button class="btn btn-sm btn-danger remove-exp-btn" data-id="${i.id}">Remove</button></td></tr>`;
@@ -1327,5 +1334,4 @@
         });
     </script>
 </body>
-
 </html>
