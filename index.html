@@ -742,22 +742,52 @@
             const applyUIState = () => { if (localStorage.getItem('appStatus') === 'stopped') { freezeUI(); console.log("Frozen"); } else { unfreezeUI(); console.log("Active"); } };
 
             const handleActivation = async (e) => {
-                e.preventDefault(); const btn = document.getElementById('submitCodeBtn'); const codeInput = document.getElementById('extensionCode'); const errorEl = document.getElementById('extension-code-error'); const userCode = codeInput.value.trim().toUpperCase();
-                if (!userCode) { errorEl.textContent = 'Enter code.'; return; }
-                btn.textContent = 'Verifying...'; btn.disabled = true; errorEl.textContent = '';
+                e.preventDefault(); 
+                const btn = document.getElementById('submitCodeBtn'); 
+                const codeInput = document.getElementById('extensionCode'); 
+                const errorEl = document.getElementById('extension-code-error'); 
+                const userCode = codeInput.value.trim().toUpperCase();
+
+                if (!userCode) { 
+                    errorEl.textContent = 'Enter code.'; 
+                    return; 
+                }
+
+                btn.textContent = 'Verifying...'; 
+                btn.disabled = true; 
+                errorEl.textContent = '';
+
                 try {
-                    // UPDATED TO USE supabaseClient
-                    const { data, error } = await supabaseClient.from('access_codes').select('*').eq('code', userCode).single();
-                    if (error || !data) throw new Error("Invalid Code");
-                    if (data.status !== 'available') throw new Error("Code used.");
-                    const { error: updateError } = await supabaseClient.from('access_codes').update({ status: 'used' }).eq('id', data.id);
-                    if (updateError) throw updateError;
-                    
-                    const newExp = new Date(); newExp.setDate(newExp.getDate() + 30);
-                    localStorage.setItem('appExpiration', newExp.getTime()); localStorage.setItem('appStatus', 'running');
-                    if (countdownInterval) clearInterval(countdownInterval); countdownInterval = setInterval(updateCountdownDisplay, 1000); updateCountdownDisplay(); applyUIState();
-                    alert('Activated for 30 days.'); document.getElementById('extensionCodeModal').style.display = 'none'; codeInput.value = '';
-                } catch (err) { errorEl.textContent = err.message || "Failed."; } finally { btn.textContent = 'Activate'; btn.disabled = false; }
+                    // SECURE RPC CALL - No direct table access!
+                    const { data, error } = await supabaseClient
+                        .rpc('verify_and_burn_code', { input_code: userCode });
+
+                    if (error || !data || data.length === 0) {
+                        throw new Error("Invalid or expired access code.");
+                    }
+
+                    // Success: Code was valid and is now burned
+                    const newExp = new Date(); 
+                    newExp.setDate(newExp.getDate() + 30);
+                    localStorage.setItem('appExpiration', newExp.getTime()); 
+                    localStorage.setItem('appStatus', 'running');
+
+                    if (countdownInterval) clearInterval(countdownInterval); 
+                    countdownInterval = setInterval(updateCountdownDisplay, 1000); 
+                    updateCountdownDisplay(); 
+                    applyUIState();
+
+                    alert('Activated for 30 days.'); 
+                    document.getElementById('extensionCodeModal').style.display = 'none'; 
+                    codeInput.value = '';
+
+                } catch (err) { 
+                    console.error("Activation error:", err);
+                    errorEl.textContent = err.message || "Failed."; 
+                } finally { 
+                    btn.textContent = 'Activate'; 
+                    btn.disabled = false; 
+                }
             };
             document.getElementById('extensionCodeForm').addEventListener('submit', handleActivation);
             document.getElementById('enterCodeBtn').addEventListener('click', () => { document.getElementById('extensionCodeModal').style.display = 'flex'; });
