@@ -87,15 +87,44 @@
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
-            flex-wrap: wrap; 
-            gap: 10px; 
             position: sticky;
             top: 0;
             z-index: 100;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        header h1 { margin: 0; font-size: 1.25rem; text-align: center; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .header-controls { display: flex; align-items: center; gap: 10px; }
+        .header-left { display: flex; align-items: center; }
+        .hamburger-btn { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; padding: 0 10px 0 0; margin-right: 5px; }
+        header h1 { margin: 0; font-size: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        /* Sliding Sidebar */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100vh;
+            background: rgba(0,0,0,0.5);
+            z-index: 998;
+            display: none;
+        }
+        .sidebar-overlay.active { display: block; }
+        .sidebar {
+            position: fixed;
+            top: 0; left: -300px;
+            width: 280px; height: 100vh;
+            background-color: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+            z-index: 999;
+            transition: left 0.3s ease;
+            display: flex; flex-direction: column;
+            padding: 20px; box-sizing: border-box;
+            overflow-y: auto;
+        }
+        .sidebar.open { left: 0; }
+        .sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .sidebar-header h2 { margin: 0; color: var(--primary-color); font-size: 1.2rem; }
+        .close-sidebar-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #333; }
+        .sidebar-content { display: flex; flex-direction: column; gap: 10px; flex-grow: 1; }
+        .sidebar-content .btn { width: 100%; text-align: center; padding: 12px; margin: 0; }
+        .sidebar-footer { margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
+        .sidebar-footer .btn { width: 100%; }
 
         /* Buttons */
         .btn { 
@@ -117,21 +146,14 @@
         .btn-info { background-color: #17a2b8; } .btn-info:hover { background-color: #138496; }
         .btn-success { background-color: #28a745; } .btn-success:hover { background-color: #218838; }
         .btn-purple { background-color: #6f42c1; } .btn-purple:hover { background-color: #5a32a3; }
+        .btn-orange { background-color: #fd7e14; } .btn-orange:hover { background-color: #e86e04; }
         .btn-sm { padding: 6px 10px; font-size: 12px; margin: 0; }
         
         /* Special Buttons */
-        .invincible-admin-btn { width: 30px; height: 30px; background-color: transparent; border-radius: 50%; border: none; cursor: pointer; }
-        .action-toggle-btn { font-size: 20px; background: none; border: none; cursor: pointer; padding: 5px; color: #007bff; }
+        .invincible-admin-btn { width: 30px; height: 30px; background-color: transparent; border-radius: 50%; border: none; cursor: pointer; outline: none; }
         .btn-icon { background-color: transparent; border: none; color: var(--primary-color); font-size: 24px; cursor: pointer; }
         
         /* Layouts */
-        .action-buttons { 
-            margin-bottom: 20px; 
-            display: flex; 
-            flex-wrap: wrap; 
-            gap: 8px; 
-        }
-        
         .data-view-container { 
             background: white; 
             padding: 15px; 
@@ -264,8 +286,6 @@
             .login-box { padding: 25px; }
             header { padding: 10px; }
             header h1 { font-size: 1.1rem; }
-            .invincible-admin-btn { position: static; margin-right: auto; }
-            .action-buttons .btn { flex: 1 1 calc(50% - 10px); font-size: 13px; padding: 10px 5px; }
             .table-header-controls { flex-direction: column; align-items: stretch; }
             .search-container { width: 100%; }
             #totalItems { text-align: center; margin-top: 5px; font-size: 0.9rem; }
@@ -336,33 +356,43 @@
 
     <div id="inventory-page" class="page-container" style="display: none;">
         <header>
-            <button class="invincible-admin-btn" title="Admin Options"></button>
-            <h1>RxStocks Pro ver. 1.0</h1>
-            <div class="header-controls">
-                <button id="logoutBtn" class="btn btn-danger btn-sm">Log Out</button>
+            <div class="header-left">
+                <button id="sidebarToggleBtn" class="hamburger-btn">&#9776;</button>
+                <h1>RxStocks Pro ver. 1.0</h1>
             </div>
+            <button class="invincible-admin-btn"></button>
         </header>
 
-        <main class="container">
-            <div class="action-buttons" id="actionButtons" style="display: none;">
-                <button id="registerBtn" class="btn">Register Item</button>
-                <button id="viewListBtn" class="btn">Full List</button>
-                <button id="dpmBtn" class="btn">Product Movement</button>
-                <button id="refillMonitoringBtn" class="btn btn-purple">Refill Monitoring</button>
-                <button id="dispenseListBtn" class="btn">Replacements</button>
-                <button id="dispensedLogBtn" class="btn">Dispensed Items</button> 
-                <button id="expirationBtn" class="btn btn-danger">Expirations</button>
-                <button id="exportBtnText" class="btn btn-secondary">Export Text</button>
-                <button id="exportBtnFile" class="btn btn-info">Export File</button>
-                <button id="importBtnText" class="btn btn-secondary">Import Text</button>
-                <button id="importBtnFile" class="btn btn-info">Import File</button>
+        <div id="sidebarOverlay" class="sidebar-overlay"></div>
+        <div id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h2>Dashboard</h2>
+                <button id="closeSidebarBtn" class="close-sidebar-btn">&times;</button>
             </div>
+            <div class="sidebar-content">
+                <button id="registerBtn" class="btn sidebar-action-btn">Register Item</button>
+                <button id="viewListBtn" class="btn sidebar-action-btn">Full List</button>
+                <button id="dpmBtn" class="btn sidebar-action-btn">Product Movement</button>
+                <button id="refillMonitoringBtn" class="btn btn-purple sidebar-action-btn">Refill Monitoring</button>
+                <button id="totalStocksRefillMenuBtn" class="btn btn-orange sidebar-action-btn">Total Stocks Refill</button>
+                <button id="dispenseListBtn" class="btn sidebar-action-btn">Replacements</button>
+                <button id="dispensedLogBtn" class="btn sidebar-action-btn">Dispensed Items</button> 
+                <button id="expirationBtn" class="btn btn-danger sidebar-action-btn">Expirations</button>
+                <button id="exportBtnText" class="btn btn-secondary sidebar-action-btn">Export Text</button>
+                <button id="exportBtnFile" class="btn btn-info sidebar-action-btn">Export File</button>
+                <button id="importBtnText" class="btn btn-secondary sidebar-action-btn">Import Text</button>
+                <button id="importBtnFile" class="btn btn-info sidebar-action-btn">Import File</button>
+            </div>
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="btn btn-danger sidebar-action-btn">Log Out</button>
+            </div>
+        </div>
 
+        <main class="container">
             <div class="data-view-container">
                 <div class="table-header-controls">
                     <div class="search-container">
                         <input type="text" id="searchInput" placeholder="Search by item name...">
-                        <button class="action-toggle-btn" id="toggleActionsBtn" title="Toggle Action Buttons">&#9670;</button>
                     </div>
                     <h3 id="totalItems" style="margin: 0; font-size: 1rem;">Total Items: 0</h3>
                 </div>
@@ -401,12 +431,14 @@
                     <input type="hidden" id="itemId">
                     <div class="form-group"><label>Item Name</label><input type="text" id="itemName" maxlength="100" required></div>
                     
-                    <div class="form-group"><label>Total Stocks</label><input type="number" id="quantity" min="0" max="999999" required></div>
+                    <div class="form-group">
+                        <label>Total Stocks <small id="totalStockAutoLabel" style="color:#007bff; font-weight:normal; display:none;">(Auto-deducts when Current Qty is refilled)</small></label>
+                        <input type="number" id="quantity" required>
+                    </div>
                     
                     <div class="form-group" id="currentQtyContainer" style="display:none; background-color: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px dashed #ccc;">
-                        <label>Current Quantity (Actual)</label>
+                        <label>Current Quantity (Shelf Actual)</label>
                         <input type="number" id="currentQuantity" min="0" max="999999">
-                        <small style="color:#666; font-size: 11px;">Modify this only if actual count mismatches system.</small>
                     </div>
 
                     <div class="form-group"><label>Unit Price (₱)</label><input type="number" id="unitPrice" min="0" max="999999" step="0.01" required></div>
@@ -491,7 +523,7 @@
         <div id="refillLogModal" class="modal">
             <div class="modal-content modal-lg">
                 <h2>Refill Monitoring Logs</h2>
-                <p style="font-size: 0.85rem; color: #666;">Records of stock increases via Edit menu.</p>
+                <p style="font-size: 0.85rem; color: #666;">Records of Current Quantity (Shelf) increases.</p>
                 <div class="table-wrapper">
                     <table>
                         <thead>
@@ -515,6 +547,38 @@
                 </div>
                 <div class="modal-actions">
                     <button type="button" id="downloadRefillLogPdfBtn" class="btn btn-info">Download PDF</button>
+                    <button type="button" class="btn btn-secondary cancel-btn">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="totalStocksRefillModal" class="modal">
+            <div class="modal-content modal-lg">
+                <h2>Total Stocks Refill Logs</h2>
+                <p style="font-size: 0.85rem; color: #666;">Records of incoming deliveries / Total Stock increases.</p>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Item Name</th>
+                                <th>Date/Time</th>
+                                <th>Previous Total</th>
+                                <th>Added</th>
+                                <th>New Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="totalStocksRefillBody"></tbody>
+                    </table>
+                </div>
+                <div class="pagination-container">
+                    <div class="pagination-controls">
+                        <button id="totalStocksRefillPrevBtn" class="btn btn-sm">Previous</button>
+                        <span id="totalStocksRefillPageInfo" class="pagination-label">Page 1 of 1</span>
+                        <button id="totalStocksRefillNextBtn" class="btn btn-sm">Next</button>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" id="downloadTotalStocksRefillPdfBtn" class="btn btn-info">Download PDF</button>
                     <button type="button" class="btn btn-secondary cancel-btn">Close</button>
                 </div>
             </div>
@@ -636,11 +700,24 @@
     </div>
 
     <script>
-        // --- SUPABASE CONFIGURATION (FIXED) ---
+        // HTML Escaping utility to prevent XSS
+        const escapeHTML = (str) => {
+            if (typeof str !== 'string') return str;
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag])
+            );
+        };
+
+        // --- SUPABASE CONFIGURATION ---
         const SUPABASE_URL = "https://wmciiqeywkluzkslzsrq.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtY2lpcWV5d2tsdXprc2x6c3JxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNDk0MjksImV4cCI6MjA3OTgyNTQyOX0.qVXO8GcXW8AsjWT4N-zkfW5B0g5qijoPX2mOZc4btVQ";
         
-        // RENAMED variable to supabaseClient to avoid conflict
         let supabaseClient = null;
         try { 
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); 
@@ -689,8 +766,7 @@
                 _db: null,
                 init: function() { 
                     return new Promise((res, rej) => { 
-                        // INCREASED DB VERSION TO 4 TO ADD REFILL LOG STORE
-                        const req = indexedDB.open('InventoryDB', 4); 
+                        const req = indexedDB.open('InventoryDB', 5); // Bumped to version 5 for new Store
                         req.onupgradeneeded = (e) => { 
                             const db = e.target.result; 
                             if (!db.objectStoreNames.contains('items')) { 
@@ -704,6 +780,10 @@
                             if (!db.objectStoreNames.contains('refillLog')) {
                                 const rs = db.createObjectStore('refillLog', { autoIncrement: true });
                                 rs.createIndex('date', 'date', { unique: false });
+                            }
+                            if (!db.objectStoreNames.contains('totalStocksRefillLog')) {
+                                const tsrl = db.createObjectStore('totalStocksRefillLog', { autoIncrement: true });
+                                tsrl.createIndex('date', 'date', { unique: false });
                             }
                         }; 
                         req.onsuccess = (e) => { this._db = e.target.result; res(); }; 
@@ -719,14 +799,34 @@
                 addDispenseLog: function(l) { return new Promise((res, rej) => { const r = this._getStore('dispenseLog', 'readwrite').add(l); r.onsuccess = res; r.onerror = rej; }); },
                 getAllDispenseLogs: function() { return new Promise((res, rej) => { const r = this._getStore('dispenseLog', 'readonly').getAll(); r.onsuccess = () => res(r.result); r.onerror = rej; }); },
                 getDispenseLogByDate: function(d) { return new Promise((res, rej) => { const r = this._getStore('dispenseLog', 'readonly').index('dispenseDateLocal').getAll(d); r.onsuccess = () => res(r.result); r.onerror = rej; }); },
-                // NEW: REFILL LOG METHODS
                 addRefillLog: function(l) { return new Promise((res, rej) => { const r = this._getStore('refillLog', 'readwrite').add(l); r.onsuccess = res; r.onerror = rej; }); },
                 getAllRefillLogs: function() { return new Promise((res, rej) => { const r = this._getStore('refillLog', 'readonly').getAll(); r.onsuccess = () => res(r.result); r.onerror = rej; }); },
                 
+                // NEW: Total Stocks Refill Logger
+                addTotalStocksRefillLog: function(l) { return new Promise((res, rej) => { const r = this._getStore('totalStocksRefillLog', 'readwrite').add(l); r.onsuccess = res; r.onerror = rej; }); },
+                getAllTotalStocksRefillLogs: function() { return new Promise((res, rej) => { const r = this._getStore('totalStocksRefillLog', 'readonly').getAll(); r.onsuccess = () => res(r.result); r.onerror = rej; }); },
+
                 deleteDispenseLogByDate: function(d) { return new Promise((res, rej) => { const req = this._getStore('dispenseLog', 'readwrite').index('dispenseDateLocal').openCursor(d); req.onsuccess = (e) => { const c = e.target.result; if(c) { c.delete(); c.continue(); } else res(); }; req.onerror = rej; }); },
                 clearStore: function(n) { return new Promise((res, rej) => { const r = this._getStore(n, 'readwrite').clear(); r.onsuccess = res; r.onerror = rej; }); },
                 bulkAdd: function(n, d) { return new Promise((res, rej) => { const s = this._getStore(n, 'readwrite'); d.forEach(i => s.put(i)); s.transaction.oncomplete = res; s.transaction.onerror = rej; }); },
             };
+
+            // --- SIDEBAR LOGIC ---
+            const sidebar = document.getElementById('sidebar');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+            const toggleSidebar = () => {
+                sidebar.classList.toggle('open');
+                sidebarOverlay.classList.toggle('active');
+            };
+            
+            document.getElementById('sidebarToggleBtn').addEventListener('click', toggleSidebar);
+            document.getElementById('closeSidebarBtn').addEventListener('click', toggleSidebar);
+            sidebarOverlay.addEventListener('click', toggleSidebar);
+
+            // Auto-close sidebar on option click to improve UX
+            document.querySelectorAll('.sidebar-action-btn').forEach(btn => {
+                btn.addEventListener('click', toggleSidebar);
+            });
 
             // --- NAVIGATION & TIMESTAMP ---
             let timestampInterval = null;
@@ -737,8 +837,8 @@
             const updateTimestamp = () => { const now = new Date(); const d = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); const t = now.toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit' }); document.getElementById('timestamp').innerHTML = `${d}<br>${t}`; document.getElementById('loginTimestamp').innerHTML = `<span>${d}</span> <span>${t}</span>`; };
 
             // --- FREEZE/ACTIVATE LOGIC ---
-            const freezeUI = () => document.querySelectorAll('#registerBtn, #viewListBtn, #dpmBtn, #dispenseListBtn, #dispensedLogBtn, #expirationBtn, #exportBtnText, #exportBtnFile, #importBtnText, #importBtnFile, #refillMonitoringBtn, .edit-btn, .dispense-btn, .delete-btn').forEach(btn => btn.disabled = true);
-            const unfreezeUI = () => document.querySelectorAll('#registerBtn, #viewListBtn, #dpmBtn, #dispenseListBtn, #dispensedLogBtn, #expirationBtn, #exportBtnText, #exportBtnFile, #importBtnText, #importBtnFile, #refillMonitoringBtn, .edit-btn, .dispense-btn, .delete-btn').forEach(btn => btn.disabled = false);
+            const freezeUI = () => document.querySelectorAll('#registerBtn, #viewListBtn, #dpmBtn, #dispenseListBtn, #dispensedLogBtn, #expirationBtn, #exportBtnText, #exportBtnFile, #importBtnText, #importBtnFile, #refillMonitoringBtn, #totalStocksRefillMenuBtn, .edit-btn, .dispense-btn, .delete-btn').forEach(btn => btn.disabled = true);
+            const unfreezeUI = () => document.querySelectorAll('#registerBtn, #viewListBtn, #dpmBtn, #dispenseListBtn, #dispensedLogBtn, #expirationBtn, #exportBtnText, #exportBtnFile, #importBtnText, #importBtnFile, #refillMonitoringBtn, #totalStocksRefillMenuBtn, .edit-btn, .dispense-btn, .delete-btn').forEach(btn => btn.disabled = false);
             const applyUIState = () => { if (localStorage.getItem('appStatus') === 'stopped') { freezeUI(); console.log("Frozen"); } else { unfreezeUI(); console.log("Active"); } };
 
             const handleActivation = async (e) => {
@@ -748,25 +848,13 @@
                 const errorEl = document.getElementById('extension-code-error'); 
                 const userCode = codeInput.value.trim().toUpperCase();
 
-                if (!userCode) { 
-                    errorEl.textContent = 'Enter code.'; 
-                    return; 
-                }
-
-                btn.textContent = 'Verifying...'; 
-                btn.disabled = true; 
-                errorEl.textContent = '';
+                if (!userCode) { errorEl.textContent = 'Enter code.'; return; }
+                btn.textContent = 'Verifying...'; btn.disabled = true; errorEl.textContent = '';
 
                 try {
-                    // SECURE RPC CALL - No direct table access!
-                    const { data, error } = await supabaseClient
-                        .rpc('verify_and_burn_code', { input_code: userCode });
+                    const { data, error } = await supabaseClient.rpc('verify_and_burn_code', { input_code: userCode });
+                    if (error || !data || data.length === 0) throw new Error("Invalid or expired access code.");
 
-                    if (error || !data || data.length === 0) {
-                        throw new Error("Invalid or expired access code.");
-                    }
-
-                    // Success: Code was valid and is now burned
                     const newExp = new Date(); 
                     newExp.setDate(newExp.getDate() + 30);
                     localStorage.setItem('appExpiration', newExp.getTime()); 
@@ -774,19 +862,16 @@
 
                     if (countdownInterval) clearInterval(countdownInterval); 
                     countdownInterval = setInterval(updateCountdownDisplay, 1000); 
-                    updateCountdownDisplay(); 
-                    applyUIState();
+                    updateCountdownDisplay(); applyUIState();
 
                     alert('Activated for 30 days.'); 
                     document.getElementById('extensionCodeModal').style.display = 'none'; 
                     codeInput.value = '';
-
                 } catch (err) { 
                     console.error("Activation error:", err);
                     errorEl.textContent = err.message || "Failed."; 
                 } finally { 
-                    btn.textContent = 'Activate'; 
-                    btn.disabled = false; 
+                    btn.textContent = 'Activate'; btn.disabled = false; 
                 }
             };
             document.getElementById('extensionCodeForm').addEventListener('submit', handleActivation);
@@ -822,19 +907,9 @@
             };
 
             // --- INVENTORY UI & LOGIC ---
-            // ALL PAGINATION LIMITED TO 10
             let currentPage = 1, itemsPerPage = 10; 
             const tableBody = document.getElementById('inventoryTableBody');
             
-            // Toggle Buttons
-            const toggleBtn = document.getElementById('toggleActionsBtn');
-            const actionContainer = document.getElementById('actionButtons');
-            toggleBtn.addEventListener('click', () => {
-                const isHidden = actionContainer.style.display === 'none';
-                actionContainer.style.display = isHidden ? 'flex' : 'none';
-                toggleBtn.innerHTML = isHidden ? '&#9670;' : '&#9671;';
-            });
-
             const refreshAndRenderTable = async () => { const inv = await db.getAllItems(); renderTable(inv); };
             const renderTable = (inv) => {
                 tableBody.innerHTML = ''; const term = document.getElementById('searchInput').value.toLowerCase();
@@ -846,10 +921,9 @@
                 
                 pageItems.forEach(i => {
                     const tr = document.createElement('tr');
-                    // Logic to handle old items that might not have totalStock explicitly set yet
                     const totalStocks = i.totalStock !== undefined ? i.totalStock : (i.initialStock !== undefined ? i.initialStock : i.quantity);
 
-                    tr.innerHTML = `<td>${i.name}</td><td>${i.quantity}</td><td>${totalStocks}</td><td>₱${parseFloat(i.unitPrice).toFixed(2)}</td><td>${i.expirationDate || 'N/A'}</td><td>${i.registrationDate}</td><td><div class="table-actions"><button class="btn btn-sm edit-btn" data-id="${i.id}">Edit</button><button class="btn btn-sm dispense-btn" data-id="${i.id}">Dispense</button><button class="btn btn-sm btn-danger delete-btn" data-id="${i.id}">Delete</button></div></td>`;
+                    tr.innerHTML = `<td>${escapeHTML(i.name)}</td><td>${i.quantity}</td><td>${totalStocks}</td><td>₱${parseFloat(i.unitPrice).toFixed(2)}</td><td>${i.expirationDate || 'N/A'}</td><td>${i.registrationDate}</td><td><div class="table-actions"><button class="btn btn-sm edit-btn" data-id="${i.id}">Edit</button><button class="btn btn-sm dispense-btn" data-id="${i.id}">Dispense</button><button class="btn btn-sm btn-danger delete-btn" data-id="${i.id}">Delete</button></div></td>`;
                     tableBody.appendChild(tr);
                 });
                 document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
@@ -891,117 +965,116 @@
             document.getElementById('clearDataBtn').addEventListener('click', () => showModal(document.getElementById('clearDataPasswordModal')));
             document.getElementById('clearDataForm').addEventListener('submit', async (e) => {
                 e.preventDefault(); if(document.getElementById('clearDataPassword').value === 'urielllamasadmin2025') {
-                    await db.clearStore('items'); await db.clearStore('dispenseLog'); await db.clearStore('refillLog'); hideModal(document.getElementById('clearDataPasswordModal')); hideModal(document.getElementById('adminOptionsModal')); refreshAndRenderTable(); alert('Data cleared.');
+                    await db.clearStore('items'); await db.clearStore('dispenseLog'); await db.clearStore('refillLog'); await db.clearStore('totalStocksRefillLog'); hideModal(document.getElementById('clearDataPasswordModal')); hideModal(document.getElementById('adminOptionsModal')); refreshAndRenderTable(); alert('Data cleared.');
                 } else document.getElementById('clear-data-error').textContent = "Incorrect.";
             });
 
             // Register & Actions
             document.getElementById('registerBtn').addEventListener('click', () => { 
                 document.getElementById('modalTitle').textContent='Register New Item'; 
-                document.getElementById('registrationDate').valueAsDate=new Date(); 
-                document.getElementById('currentQtyContainer').style.display = 'none'; // Hide current qty on register
+                
+                // Get local date nicely formatted into YYYY-MM-DD
+                const today = new Date();
+                const localDate = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+                document.getElementById('registrationDate').value = localDate; 
+                
+                document.getElementById('currentQtyContainer').style.display = 'none'; 
                 document.getElementById('currentQuantity').required = false;
+                document.getElementById('totalStockAutoLabel').style.display = 'none';
                 showModal(document.getElementById('itemModal')); 
             });
             
             document.getElementById('itemForm').addEventListener('submit', async (e) => {
                 e.preventDefault(); 
                 
-                // --- 1. CAPITALIZE FIRST LETTER LOGIC ---
                 let n = document.getElementById('itemName').value.trim(); 
                 if(n.length > 0) {
                     n = n.charAt(0).toUpperCase() + n.slice(1);
                 }
 
-                // --- 2. CHECK DUPLICATE LOGIC ---
                 const idStr = document.getElementById('itemId').value;
                 const currentId = idStr ? parseInt(idStr) : null;
                 
-                // Get all items to check for duplicates
                 const allItems = await db.getAllItems();
-                // Check if name exists (case-insensitive), excluding the current item if editing
                 const isDuplicate = allItems.some(i => i.name.toLowerCase() === n.toLowerCase() && i.id !== currentId);
 
                 if (isDuplicate) {
                     alert('Error: An item with this name already exists. Please use a unique name.');
-                    return; // Stop function execution, do not save
+                    return; 
                 }
 
-                // The input id 'quantity' represents TOTAL STOCKS
+                // Get values
                 const totalStockInput = parseInt(document.getElementById('quantity').value); 
                 const p = parseFloat(document.getElementById('unitPrice').value); 
                 const ex = document.getElementById('expirationDate').value; 
                 const r = document.getElementById('registrationDate').value; 
                 const currentQtyInput = document.getElementById('currentQuantity').value;
 
-                if(!n || totalStockInput<0 || p<0) return;
+                if(!n || isNaN(totalStockInput) || p<0) return;
 
                 if(currentId) { 
                     // --- UPDATE ITEM (EDIT MODE) ---
                     const item = await db.getItem(currentId); 
                     const oldQty = item.quantity;
-                    // Logic to get previous Total Stock safely
                     const oldTotal = item.totalStock !== undefined ? item.totalStock : (item.initialStock || item.quantity);
 
-                    const newCurrentQty = currentQtyInput !== "" ? parseInt(currentQtyInput) : item.quantity;
+                    const newCurrentQty = currentQtyInput !== "" ? parseInt(currentQtyInput) : oldQty;
                     
-                    // Constraint Check
-                    if (newCurrentQty > totalStockInput) {
-                        alert(`Current Quantity (${newCurrentQty}) cannot be greater than Total Stocks (${totalStockInput}).`);
-                        return;
+                    const qtyDifference = newCurrentQty - oldQty;
+                    const totalStockDelivery = totalStockInput - oldTotal;
+
+                    // 1. Calculate the final Total Stock with auto-deduction if shelf was filled
+                    let finalTotalStock = totalStockInput;
+                    if (qtyDifference > 0) {
+                        finalTotalStock = totalStockInput - qtyDifference;
                     }
 
-                    // --- NEW REFILL MONITORING LOGIC ---
-                    // Calculate exact differences
-                    const qtyDifference = newCurrentQty - oldQty;
-                    const totalStockDifference = totalStockInput - oldTotal;
+                    // 2. Log Total Stocks Refill if there was an actual delivery/increase to total stocks explicitly
+                    if (totalStockDelivery > 0) {
+                        await db.addTotalStocksRefillLog({
+                            itemId: item.id,
+                            itemName: n,
+                            date: new Date().toISOString(),
+                            prevTotal: oldTotal,
+                            addedQty: totalStockDelivery,
+                            newTotal: totalStockInput // The raw total stock they inputted before deduction
+                        });
+                    }
 
-                    // If Current Quantity Increased
+                    // 3. Log the shelf refill (Current Qty increase)
                     if (qtyDifference > 0) {
                         await db.addRefillLog({
                             itemId: item.id,
                             itemName: n,
                             date: new Date().toISOString(),
-                            action: `Current Qty (Prev: ${oldQty})`, // Action / Current No.
-                            addedQty: qtyDifference,                 // Added
-                            newQty: newCurrentQty                    // New Qty
-                        });
-                    }
-
-                    // If Total Stock Increased
-                    if (totalStockDifference > 0) {
-                        await db.addRefillLog({
-                            itemId: item.id,
-                            itemName: n,
-                            date: new Date().toISOString(),
-                            action: `Total Stocks (Prev: ${oldTotal})`, // Action / Current No.
-                            addedQty: totalStockDifference,             // Added
-                            newQty: totalStockInput                     // New Qty (New Limit)
+                            action: `Current Qty (Prev: ${oldQty})`, 
+                            addedQty: qtyDifference,                 
+                            newQty: newCurrentQty                    
                         });
                     }
 
                     await db.updateItem({
                         ...item, 
-                        name:n, 
+                        name: n, 
                         quantity: newCurrentQty, 
-                        totalStock: totalStockInput, 
-                        initialStock: totalStockInput, 
-                        unitPrice:p, 
-                        expirationDate:ex, 
-                        registrationDate:r
+                        totalStock: finalTotalStock, 
+                        initialStock: item.initialStock, 
+                        unitPrice: p, 
+                        expirationDate: ex, 
+                        registrationDate: r
                     }); 
                 }
                 else { 
                     // --- NEW ITEM (REGISTRATION MODE) ---
                     await db.addItem({ 
                         id: Date.now(), 
-                        name:n, 
-                        quantity: totalStockInput, 
+                        name: n, 
+                        quantity: totalStockInput, // Initial Current Qty equals Total Stock
                         totalStock: totalStockInput, 
                         initialStock: totalStockInput, 
-                        unitPrice:p, 
-                        expirationDate:ex, 
-                        registrationDate:r
+                        unitPrice: p, 
+                        expirationDate: ex, 
+                        registrationDate: r
                     }); 
                 }
                 hideModal(document.getElementById('itemModal')); refreshAndRenderTable();
@@ -1015,15 +1088,13 @@
                     document.getElementById('itemId').value=i.id; 
                     document.getElementById('itemName').value=i.name; 
                     
-                    // Determine Total Stock (Legacy fallback)
                     const ts = i.totalStock !== undefined ? i.totalStock : (i.initialStock !== undefined ? i.initialStock : i.quantity);
+                    document.getElementById('quantity').value = ts; 
                     
-                    document.getElementById('quantity').value = ts; // "Total Stocks" Input
-                    
-                    // Show and populate Current Quantity Field
                     const qtyContainer = document.getElementById('currentQtyContainer');
                     qtyContainer.style.display = 'block';
                     document.getElementById('currentQuantity').value = i.quantity;
+                    document.getElementById('totalStockAutoLabel').style.display = 'inline';
                     
                     document.getElementById('unitPrice').value=i.unitPrice; 
                     document.getElementById('expirationDate').value=i.expirationDate; 
@@ -1031,16 +1102,14 @@
                     document.getElementById('modalTitle').textContent='Edit Item'; 
                     showModal(document.getElementById('itemModal')); 
                 }
-                else if (button.classList.contains('dispense-btn')) { const i = await db.getItem(id); document.getElementById('dispenseItemName').textContent=i.name; document.getElementById('dispenseAvailableQty').textContent=i.quantity; document.getElementById('dispenseQuantity').max=i.quantity; document.getElementById('dispenseForm').dataset.id=id; showModal(document.getElementById('dispenseModal')); }
+                else if (button.classList.contains('dispense-btn')) { const i = await db.getItem(id); document.getElementById('dispenseItemName').textContent=escapeHTML(i.name); document.getElementById('dispenseAvailableQty').textContent=i.quantity; document.getElementById('dispenseQuantity').max=i.quantity; document.getElementById('dispenseForm').dataset.id=id; showModal(document.getElementById('dispenseModal')); }
             });
 
             document.getElementById('dispenseForm').addEventListener('submit', async (e) => {
                 e.preventDefault(); const id = parseInt(e.target.dataset.id); const qty = parseInt(document.getElementById('dispenseQuantity').value);
                 const item = await db.getItem(id); if(qty > item.quantity) return;
                 
-                // Dispense Logic: Reduce Quantity, DO NOT Change Total Stock
                 item.quantity -= qty; 
-                // Ensure legacy fields don't break logic
                 if(item.totalStock === undefined) { item.totalStock = (item.quantity + qty); }
                 if(item.initialStock === undefined) { item.initialStock = item.totalStock; }
 
@@ -1049,8 +1118,6 @@
                 await db.addDispenseLog({ itemId: item.id, itemName: item.name, dispensedQty: qty, remainingQty: item.quantity, unitPrice: item.unitPrice, totalAmount: qty*item.unitPrice, dispenseDate: now.toISOString(), dispenseDateLocal: localDate });
                 hideModal(document.getElementById('dispenseModal')); refreshAndRenderTable();
             });
-
-            // --- FUNCTIONALITY FOR BUTTONS ---
 
             // 1. REPLACEMENTS (Dispense List -> Items Needing Replacement)
             let replacementPage = 1;
@@ -1073,7 +1140,7 @@
                    const target = i.totalStock !== undefined ? i.totalStock : (i.initialStock || i.quantity); 
                    const needed = target - i.quantity;
                    const row = `<tr>
-                       <td>${i.name}</td>
+                       <td>${escapeHTML(i.name)}</td>
                        <td style="color:red; font-weight:bold;">${i.quantity}</td>
                        <td>${target}</td>
                        <td>${needed}</td>
@@ -1089,7 +1156,6 @@
 
             document.getElementById('dispenseListBtn').addEventListener('click', async () => {
                 const items = await db.getAllItems();
-                // FILTER: Items where Current Qty < Total Stocks
                 currentReplacementList = items.filter(i => {
                     const ts = i.totalStock !== undefined ? i.totalStock : (i.initialStock !== undefined ? i.initialStock : i.quantity);
                     return i.quantity < ts;
@@ -1119,7 +1185,7 @@
 
                 pageItems.forEach(l => {
                     const dateObj = new Date(l.dispenseDate);
-                    const row = `<tr><td>${l.itemName}</td><td>${dateObj.toLocaleDateString()}</td><td>${dateObj.toLocaleTimeString()}</td><td>${l.dispensedQty}</td></tr>`;
+                    const row = `<tr><td>${escapeHTML(l.itemName)}</td><td>${dateObj.toLocaleDateString()}</td><td>${dateObj.toLocaleTimeString()}</td><td>${l.dispensedQty}</td></tr>`;
                     tbody.innerHTML += row;
                 });
 
@@ -1147,7 +1213,7 @@
                  generatePDF('Dispensed Items History', ['Item', 'Date', 'Time', 'Qty'], rows);
             });
 
-            // 3. REFILL MONITORING (NEW FEATURE UPDATED)
+            // 3. REFILL MONITORING (Shelf Refills)
             let refillLogPage = 1;
             const refillLogPerPage = 10;
             let currentRefillLog = [];
@@ -1164,17 +1230,13 @@
 
                 pageItems.forEach(l => {
                     const d = new Date(l.date);
-                    
-                    // Format the "Added" column to be specific
                     let addedDisplay = '-';
-                    if (l.addedQty > 0) {
-                        addedDisplay = `<span style="color:green; font-weight:bold;">+${l.addedQty}</span>`;
-                    }
+                    if (l.addedQty > 0) addedDisplay = `<span style="color:green; font-weight:bold;">+${l.addedQty}</span>`;
 
                     const row = `<tr>
-                        <td>${l.itemName}</td>
+                        <td>${escapeHTML(l.itemName)}</td>
                         <td>${d.toLocaleDateString()} ${d.toLocaleTimeString()}</td>
-                        <td>${l.action}</td>
+                        <td>${escapeHTML(l.action)}</td>
                         <td>${addedDisplay}</td>
                         <td><strong>${l.newQty}</strong></td>
                     </tr>`;
@@ -1200,7 +1262,6 @@
                  if(!currentRefillLog.length) { alert('No history to print.'); return; }
                  const rows = currentRefillLog.map(l => {
                     const d = new Date(l.date);
-                    // Use the detailed action string and precise added quantity
                     return [
                         l.itemName, 
                         `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`, 
@@ -1209,15 +1270,73 @@
                         l.newQty
                     ];
                  });
-                 generatePDF('Refill & Stock Adjustment Log', ['Item', 'Date/Time', 'Action / Current No.', 'Added', 'New Qty'], rows);
+                 generatePDF('Shelf Refill Logs', ['Item', 'Date/Time', 'Action / Current No.', 'Added', 'New Qty'], rows);
             });
 
+            // 4. TOTAL STOCKS REFILL (Deliveries into total pool)
+            let totalStocksRefillPage = 1;
+            const totalStocksRefillPerPage = 10;
+            let currentTotalStocksRefillLog = [];
 
-            // 4. EXPIRATIONS (ONLY SHOW ITEMS EXPIRING IN <= 10 DAYS)
+            const renderTotalStocksRefillLog = (list, page) => {
+                const tbody = document.getElementById('totalStocksRefillBody');
+                tbody.innerHTML = '';
+                const totalPages = Math.ceil(list.length / totalStocksRefillPerPage) || 1;
+                totalStocksRefillPage = Math.min(page, totalPages);
+                const start = (totalStocksRefillPage - 1) * totalStocksRefillPerPage;
+                const pageItems = list.slice(start, start + totalStocksRefillPerPage);
+
+                if(pageItems.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No delivery/total stock refill records found.</td></tr>'; }
+
+                pageItems.forEach(l => {
+                    const d = new Date(l.date);
+                    let addedDisplay = '-';
+                    if (l.addedQty > 0) addedDisplay = `<span style="color:#fd7e14; font-weight:bold;">+${l.addedQty}</span>`;
+
+                    const row = `<tr>
+                        <td>${escapeHTML(l.itemName)}</td>
+                        <td>${d.toLocaleDateString()}<br>${d.toLocaleTimeString()}</td>
+                        <td>${l.prevTotal}</td>
+                        <td>${addedDisplay}</td>
+                        <td><strong>${l.newTotal}</strong></td>
+                    </tr>`;
+                    tbody.innerHTML += row;
+                });
+
+                document.getElementById('totalStocksRefillPageInfo').textContent = `Page ${totalStocksRefillPage} of ${totalPages}`;
+                document.getElementById('totalStocksRefillPrevBtn').disabled = totalStocksRefillPage === 1;
+                document.getElementById('totalStocksRefillNextBtn').disabled = totalStocksRefillPage === totalPages;
+            };
+
+            document.getElementById('totalStocksRefillMenuBtn').addEventListener('click', async () => {
+                const logs = await db.getAllTotalStocksRefillLogs();
+                currentTotalStocksRefillLog = logs.sort((a,b) => new Date(b.date) - new Date(a.date));
+                renderTotalStocksRefillLog(currentTotalStocksRefillLog, 1);
+                showModal(document.getElementById('totalStocksRefillModal'));
+            });
+            
+            document.getElementById('totalStocksRefillPrevBtn').addEventListener('click', () => { if(totalStocksRefillPage > 1) renderTotalStocksRefillLog(currentTotalStocksRefillLog, totalStocksRefillPage - 1); });
+            document.getElementById('totalStocksRefillNextBtn').addEventListener('click', () => { const total = Math.ceil(currentTotalStocksRefillLog.length / totalStocksRefillPerPage); if(totalStocksRefillPage < total) renderTotalStocksRefillLog(currentTotalStocksRefillLog, totalStocksRefillPage + 1); });
+
+            document.getElementById('downloadTotalStocksRefillPdfBtn').addEventListener('click', () => {
+                 if(!currentTotalStocksRefillLog.length) { alert('No history to print.'); return; }
+                 const rows = currentTotalStocksRefillLog.map(l => {
+                    const d = new Date(l.date);
+                    return [
+                        l.itemName, 
+                        `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`, 
+                        l.prevTotal, 
+                        l.addedQty > 0 ? `+${l.addedQty}` : '-', 
+                        l.newTotal
+                    ];
+                 });
+                 generatePDF('Total Stocks Refill (Delivery) Logs', ['Item Name', 'Date/Time', 'Previous Total', 'Added', 'New Total'], rows);
+            });
+
+            // 5. EXPIRATIONS 
             document.getElementById('expirationBtn').addEventListener('click', async () => {
                 const items = await db.getAllItems();
                 
-                // Calculate Date Threshold: Today + 10 Days
                 const today = new Date();
                 const targetDate = new Date();
                 targetDate.setDate(today.getDate() + 10);
@@ -1226,7 +1345,6 @@
                 const expItems = items.filter(i => {
                     if(!i.expirationDate) return false;
                     const itemDate = new Date(i.expirationDate);
-                    // Filter: Date must be less than or equal to target (10 days from now)
                     return itemDate <= targetDate;
                 }).sort((a,b) => new Date(a.expirationDate) - new Date(b.expirationDate));
 
@@ -1235,7 +1353,7 @@
                       tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">No items expiring within 10 days.</td></tr>';
                 } else {
                     tbody.innerHTML = expItems.map(i => {
-                        return `<tr><td>${i.name}</td><td>${i.expirationDate}</td><td><button class="btn btn-sm btn-danger remove-exp-btn" data-id="${i.id}">Remove</button></td></tr>`;
+                        return `<tr><td>${escapeHTML(i.name)}</td><td>${i.expirationDate}</td><td><button class="btn btn-sm btn-danger remove-exp-btn" data-id="${i.id}">Remove</button></td></tr>`;
                     }).join('');
                 }
                 showModal(document.getElementById('expirationModal'));
@@ -1251,12 +1369,13 @@
                  }
             });
 
-            // 5. EXPORT/IMPORT
+            // 6. EXPORT/IMPORT
             document.getElementById('exportBtnText').addEventListener('click', async () => {
                 const items = await db.getAllItems();
                 const logs = await db.getAllDispenseLogs();
                 const refillLogs = await db.getAllRefillLogs();
-                const data = JSON.stringify({ items, logs, refillLogs }, null, 2);
+                const totalStocksRefillLogs = await db.getAllTotalStocksRefillLogs();
+                const data = JSON.stringify({ items, logs, refillLogs, totalStocksRefillLogs }, null, 2);
                 try { await navigator.clipboard.writeText(data); alert('Data copied to clipboard successfully!'); } 
                 catch(err) { alert('Failed to copy. Please use Export File instead.'); }
             });
@@ -1265,7 +1384,8 @@
                 const items = await db.getAllItems();
                 const logs = await db.getAllDispenseLogs();
                 const refillLogs = await db.getAllRefillLogs();
-                const data = JSON.stringify({ items, logs, refillLogs }, null, 2);
+                const totalStocksRefillLogs = await db.getAllTotalStocksRefillLogs();
+                const data = JSON.stringify({ items, logs, refillLogs, totalStocksRefillLogs }, null, 2);
                 const blob = new Blob([data], {type: 'application/json'});
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url; a.download = `rxstocks_backup_${new Date().toISOString().slice(0,10)}.json`;
@@ -1281,6 +1401,7 @@
                     if(data.items && Array.isArray(data.items)) { await db.bulkAdd('items', data.items); }
                     if(data.logs && Array.isArray(data.logs)) { await db.bulkAdd('dispenseLog', data.logs); }
                     if(data.refillLogs && Array.isArray(data.refillLogs)) { await db.bulkAdd('refillLog', data.refillLogs); }
+                    if(data.totalStocksRefillLogs && Array.isArray(data.totalStocksRefillLogs)) { await db.bulkAdd('totalStocksRefillLog', data.totalStocksRefillLogs); }
                     alert(`Import successful!`);
                     refreshAndRenderTable();
                     hideModal(document.getElementById('importTextModal'));
@@ -1293,7 +1414,7 @@
                 const reader = new FileReader(); reader.onload = (e) => processImport(e.target.result); reader.readAsText(file); e.target.value = ''; 
             });
 
-            // 6. PDF HELPER
+            // 7. PDF HELPER
             const generatePDF = (title, headers, rows) => {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
@@ -1324,7 +1445,6 @@
             document.getElementById('downloadExpirationPdfBtn').addEventListener('click', async () => {
                 const items = await db.getAllItems();
                 
-                // Logic updated to match screen view: <= 10 Days
                 const today = new Date();
                 const targetDate = new Date();
                 targetDate.setDate(today.getDate() + 10);
@@ -1342,10 +1462,10 @@
                 generatePDF('Expiration Report (Next 10 Days)', ['Item Name', 'Expiry Date', 'Current Qty'], rows);
             });
 
-            // 7. VIEW LIST & DPM
+            // 8. VIEW LIST & DPM
             document.getElementById('viewListBtn').addEventListener('click', async () => {
                 const list = await db.getAllItems(); const c = document.getElementById('fullItemList'); 
-                c.innerHTML = list.length ? `<ul>${list.map(i=>`<li><strong>${i.name}</strong> - Qty: ${i.quantity} (Exp: ${i.expirationDate || 'N/A'})</li>`).join('')}</ul>` : '<p>Empty</p>';
+                c.innerHTML = list.length ? `<ul>${list.map(i=>`<li><strong>${escapeHTML(i.name)}</strong> - Qty: ${i.quantity} (Exp: ${i.expirationDate || 'N/A'})</li>`).join('')}</ul>` : '<p>Empty</p>';
                 showModal(document.getElementById('viewListModal'));
             });
 
@@ -1355,7 +1475,7 @@
                 const d = document.getElementById('dpmDateInput').value; if(!d) return;
                 const logs = await db.getDispenseLogByDate(d); const c = document.getElementById('dpmContent');
                 if(!logs.length) { c.innerHTML='<p style="text-align:center;">No records for this date.</p>'; return; }
-                c.innerHTML = `<table style="width:100%;border-collapse:collapse;margin-top:10px;"><thead><tr style="background:#eee;"><th style="padding:8px;border:1px solid #ddd;">Item</th><th style="padding:8px;border:1px solid #ddd;">Qty</th><th style="padding:8px;border:1px solid #ddd;">Total</th></tr></thead><tbody>${logs.map(l=>`<tr><td style="padding:8px;border:1px solid #ddd;">${l.itemName}</td><td style="padding:8px;border:1px solid #ddd;">${l.dispensedQty}</td><td style="padding:8px;border:1px solid #ddd;">₱${l.totalAmount.toFixed(2)}</td></tr>`).join('')}</tbody></table>`;
+                c.innerHTML = `<table style="width:100%;border-collapse:collapse;margin-top:10px;"><thead><tr style="background:#eee;"><th style="padding:8px;border:1px solid #ddd;">Item</th><th style="padding:8px;border:1px solid #ddd;">Qty</th><th style="padding:8px;border:1px solid #ddd;">Total</th></tr></thead><tbody>${logs.map(l=>`<tr><td style="padding:8px;border:1px solid #ddd;">${escapeHTML(l.itemName)}</td><td style="padding:8px;border:1px solid #ddd;">${l.dispensedQty}</td><td style="padding:8px;border:1px solid #ddd;">₱${l.totalAmount.toFixed(2)}</td></tr>`).join('')}</tbody></table>`;
             });
 
             // Start
